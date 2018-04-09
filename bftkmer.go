@@ -1,11 +1,13 @@
 package bft
 
 /*
-#include <bft/bft.h>
-#cgo LDFLAGS: -lbft -lJudy -ljemalloc
+#include <./include/bft.h>
+#cgo CFLAGS: -std=c99
+#cgo LDFLAGS:-L./libs/ -lbft -lJudy -ljemalloc -lm
 */
 import "C"
 import (
+	"fmt"
 	"runtime"
 	"unsafe"
 )
@@ -34,7 +36,12 @@ func NewBFTKmer(kmer string, graph *BFTGraph) *BFTKmer {
 }
 
 func (k *BFTKmer) Free() {
-	C.free_BFT_kmer(k.kmers, C.int(k.number))
+	if k != nil && k.kmers != nil {
+		fmt.Print("freeing:", C.GoString(k.kmers.kmer))
+		//C.free_BFT_kmer(k.kmers, C.int(k.number)) // Why does this cause an inconsistent SIGSEGV but only freeing the content doesn't?
+		C.free_BFT_kmer_content(k.kmers, C.int(k.number))
+		fmt.Println("...Done")
+	}
 	Freed++
 }
 

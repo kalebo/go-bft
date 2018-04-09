@@ -1,8 +1,9 @@
 package bft
 
 /*
-#include <bft/bft.h>
-#cgo LDFLAGS: -lbft -lJudy -ljemalloc
+#include <./include/bft.h>
+#cgo CFLAGS: -std=c99
+#cgo LDFLAGS:-L./libs/ -lbft -lJudy -ljemalloc -lm
 */
 import "C"
 import (
