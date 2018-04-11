@@ -38,8 +38,8 @@ func NewBFTKmer(kmer string, graph *BFTGraph) *BFTKmer {
 func (k *BFTKmer) Free() {
 	if k != nil && k.kmers != nil {
 		fmt.Print("freeing:", C.GoString(k.kmers.kmer))
-		//C.free_BFT_kmer(k.kmers, C.int(k.number)) // Why does this cause an inconsistent SIGSEGV but only freeing the content doesn't?
-		C.free_BFT_kmer_content(k.kmers, C.int(k.number))
+		C.free_BFT_kmer(k.kmers, C.int(k.number)) // Causes an inconsistent SIGSEGV
+		//C.free_BFT_kmer_content(k.kmers, C.int(k.number)) // does not segfault but probably causes a memory leak
 		fmt.Println("...Done")
 	}
 	Freed++
