@@ -12,6 +12,34 @@ import (
 	"unsafe"
 )
 
+////////////////////
+/// BFTKmerArray ///
+////////////////////
+
+type BFTKmerArray struct {
+	arrayPtr  *C.BFT_kmer // pointing to the array start
+	count int // count of characters in the associated array
+	graph *BFTGraph // holding on to reference to prevent preemptive GC of graph
+}
+
+func NewBFTKmerArray(kmers *C.BFT_kmer, count int, graph *BFTGraph) *BFTKmerArray {
+	a := &BFTKmerArray{kmers, count, graph}
+	runtime.SetFinalizer(a, (*BFTKmerArray).Free)
+	Alloc++
+	return a
+}
+
+func (a *BFTKmerArray) Free() {
+	fmt.Print("freeing: kmer array", " of count ", a.count)
+	C.free_BFT_kmer(a.arrayPtr, C.int(a.count))
+	fmt.Println("...Done")
+	Freed++
+}
+
+func (a *BFTKmerArray) RegisterFinalization(kmer *BFTKmer) {
+	fmt.Println("Child was finalized:", C.GoString(kmer.kmers.kmer))
+}
+
 ///////////////
 /// BFTKmer ///
 ///////////////
@@ -19,16 +47,17 @@ import (
 type BFTKmer struct {
 	kmers  *C.BFT_kmer
 	graph  *BFTGraph
-	number int // number of kmers in array
-	// Update assumption: number should always be 1; each element in 4-array will be collected separately
-	//sync.Mutex // not used yet...
+	containingArray *BFTKmerArray
 }
 
 func NewBFTKmer(kmer string, graph *BFTGraph) *BFTKmer {
 	cstrKmer := C.CString(kmer)
 	defer C.free(unsafe.Pointer(cstrKmer))
 
-	k := &BFTKmer{C.get_kmer(cstrKmer, graph.graph), graph, 1}
+	kmerPtr := C.get_kmer(cstrKmer, graph.graph)
+	kmerArr := NewBFTKmerArray(kmerPtr, 1, graph)
+
+	k := &BFTKmer{kmerPtr, graph, kmerArr}
 	runtime.SetFinalizer(k, (*BFTKmer).Free)
 	Alloc++
 
@@ -36,12 +65,7 @@ func NewBFTKmer(kmer string, graph *BFTGraph) *BFTKmer {
 }
 
 func (k *BFTKmer) Free() {
-	if k != nil && k.kmers != nil {
-		fmt.Print("freeing:", C.GoString(k.kmers.kmer))
-		C.free_BFT_kmer(k.kmers, C.int(k.number)) // Causes an inconsistent SIGSEGV
-		//C.free_BFT_kmer_content(k.kmers, C.int(k.number)) // does not segfault but probably causes a memory leak
-		fmt.Println("...Done")
-	}
+	k.containingArray.RegisterFinalization(k)
 	Freed++
 }
 
@@ -56,13 +80,14 @@ func (k *BFTKmer) Exists() bool {
 
 func (k *BFTKmer) GetSuccessors() []*BFTKmer {
 	var arrayPtr *C.BFT_kmer = C.get_successors(k.kmers, k.graph.graph)
+	kmerArr := NewBFTKmerArray(arrayPtr, 4, k.graph)
 
 	// Makes a go slice backed by a c array without copy
 	kmerSlice := (*[1 << 30]C.BFT_kmer)(unsafe.Pointer(arrayPtr))[:4:4] // length of four
 
 	result := make([]*BFTKmer, 0)
 	for i := 0; i < 4; i++ {
-		kmer := &BFTKmer{&kmerSlice[i], k.graph, 1}
+		kmer := &BFTKmer{&kmerSlice[i], k.graph, kmerArr}
 		runtime.SetFinalizer(kmer, (*BFTKmer).Free)
 		Alloc++
 

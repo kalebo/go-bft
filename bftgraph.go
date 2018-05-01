@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"sync"
 	"unsafe"
+	"fmt"
 )
 
 var (
@@ -39,6 +40,7 @@ func NewBFTGraph(path string) *BFTGraph {
 }
 
 func (g *BFTGraph) Free() {
+	fmt.Println("Freeing Graph!")
 	C.free_cdbg(g.graph)
 	Freed++
 }
@@ -48,12 +50,7 @@ func (g *BFTGraph) SetMarking() {
 }
 
 func (g *BFTGraph) GetKmer(kmer string) *BFTKmer {
-	cstrKmer := C.CString(kmer)
-	defer C.free(unsafe.Pointer(cstrKmer))
-
-	k := &BFTKmer{C.get_kmer(cstrKmer, g.graph), g, 1} // Magic number is because an array of 1 is returned
-	runtime.SetFinalizer(k, (*BFTKmer).Free)
-	Alloc++
+	k := NewBFTKmer(kmer, g)
 
 	return k
 }
