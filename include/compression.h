@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <Judy.h>
+#include "Judy.h"
 
 #include "kseq.h"
 KSEQ_INIT(int, read)

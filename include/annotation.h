@@ -16,7 +16,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <Judy.h>
+#include "Judy.h"
 
 #include "default_param.h"
 #include "useful_macros.h"
