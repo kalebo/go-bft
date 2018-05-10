@@ -13,7 +13,7 @@
 #include <limits.h>
 #include <string.h>
 
-#include <Judy.h>
+#include "Judy.h"
 
 #include <omp.h>
 
