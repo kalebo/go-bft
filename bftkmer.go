@@ -59,7 +59,9 @@ func NewBFTKmer(kmer string, graph *BFTGraph) *BFTKmer {
 	kmerArr := NewBFTKmerArray(kmerPtr, 1, graph)
 
 	k := &BFTKmer{kmerPtr, graph, kmerArr, nil}
-	k.colorIds = k.getColors()
+	if k.Exists() {
+		k.colorIds = k.getColors()
+	}
 	runtime.SetFinalizer(k, (*BFTKmer).Free)
 	Alloc++
 
@@ -69,7 +71,9 @@ func NewBFTKmer(kmer string, graph *BFTGraph) *BFTKmer {
 // The purpose of this function is to have an alternate "constructor" that isn't dependent upon the string of the kmer.
 func newBFTKmerAlt(kmer *C.BFT_kmer, graph *BFTGraph, kmerArr *BFTKmerArray) *BFTKmer {
 	k := &BFTKmer{kmer, graph, kmerArr, nil}
-	k.colorIds = k.getColors()
+	if k.Exists() {
+	  k.colorIds = k.getColors()
+	}
 	runtime.SetFinalizer(k, (*BFTKmer).Free)
 	Alloc++
 
@@ -101,7 +105,7 @@ func (k *BFTKmer) GetSuccessors() []*BFTKmer {
 	for i := 0; i < 4; i++ {
 		kmer := newBFTKmerAlt(&kmerSlice[i], k.graph, kmerArr)
 
-		if kmer.Exists() {
+		if kmer.colorIds != nil { // colors is nil for kmers not in graph
 			result = append(result, kmer)
 		}
 	}
